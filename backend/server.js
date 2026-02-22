@@ -89,7 +89,12 @@ cron.schedule("0 8 * * *", async () => {
 // ======================
 // START SERVER (IMPORTANT FOR RAILWAY)
 
-const PORT = process.env.PORT; // DO NOT set 8080 fallback
+const PORT = process.env.PORT;
+
+if (!PORT) {
+  console.error("PORT not defined");
+  process.exit(1);
+}
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Server running on port ${PORT}`);
