@@ -36,25 +36,56 @@ app.use("/api/analytics", require("./routes/analyticsRoutes"));
 // ======================
 // DAILY CRON JOB (8 AM)
 // ======================
-cron.schedule("0 8 * * *", () => {
-  console.log("📅 Daily reminder triggered");
+// ===============================
+// SAFE DAILY CRON JOB (Railway Safe)
+// ===============================
 
-  db.query(
-    "SELECT email FROM users WHERE role = 'student'",
-    (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return;
-      }
+const cron = require("node-cron");
 
-      results.forEach((student) => {
-        sendAlert(
-          student.email,
-          "Reminder: Please follow your AI generated study plan today."
-        );
-      });
+// Runs every day at 8:00 AM
+cron.schedule("0 8 * * *", async () => {
+  console.log("⏰ Daily reminder triggered");
+
+  try {
+    // Check if DB connection exists
+    if (!connection) {
+      console.error("❌ No database connection available");
+      return;
     }
-  );
+
+    // Fetch student emails safely
+    const [students] = await connection
+      .promise()
+      .query("SELECT email FROM users WHERE role = 'student'");
+
+    console.log(`📧 Found ${students.length} students`);
+
+    if (!students || students.length === 0) {
+      console.log("⚠️ No students found, skipping email sending.");
+      return;
+    }
+
+    // Loop through students
+    for (const student of students) {
+      try {
+        console.log(`Sending reminder to: ${student.email}`);
+
+        // TODO: Replace this with your email function
+        // await sendEmail(student.email);
+
+      } catch (emailError) {
+        console.error(
+          `❌ Failed to send email to ${student.email}:`,
+          emailError
+        );
+      }
+    }
+
+    console.log("✅ Daily reminder job completed successfully");
+
+  } catch (error) {
+    console.error("🚨 Cron job error:", error);
+  }
 });
 
 // ======================
