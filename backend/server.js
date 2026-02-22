@@ -40,8 +40,6 @@ app.use("/api/analytics", require("./routes/analyticsRoutes"));
 // SAFE DAILY CRON JOB (Railway Safe)
 // ===============================
 
-const cron = require("node-cron");
-
 // Runs every day at 8:00 AM
 cron.schedule("0 8 * * *", async () => {
   console.log("⏰ Daily reminder triggered");
