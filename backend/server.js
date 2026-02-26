@@ -4,11 +4,11 @@ const cors = require('cors');
 const cron = require('node-cron');
 
 const db = require('./config/db');
-const authRoutes = require('./routes/authRoutes');        // ✅ Changed
-const studentRoutes = require('./routes/studentRoutes');  // ✅ Changed
-const parentRoutes = require('./routes/parentRoutes');    // ✅ Added
-const teacherRoutes = require('./routes/teacherRoutes');  // ✅ Added
-const analyticsRoutes = require('./routes/analyticsRoutes'); // ✅ Added
+const authRoutes = require('./routes/authRoutes');           // ← changed
+const studentRoutes = require('./routes/studentRoutes');     // ← changed
+const parentRoutes = require('./routes/parentRoutes');       // optional
+const teacherRoutes = require('./routes/teacherRoutes');     // optional
+const analyticsRoutes = require('./routes/analyticsRoutes'); // optional
 const { sendEmail } = require('./emailservice');
 
 const app = express();
@@ -16,59 +16,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// API Routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/parents', parentRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Health check endpoint
-app.get('/', (req, res) => {
-  res.json({ status: '✅ Server is running' });
-});
+// health check
+app.get('/', (req, res) => res.json({ status: '✅ Server is running' }));
 
-// Daily Cron Job (8 AM)
+// cron job etc…
 cron.schedule('0 8 * * *', async () => {
   console.log('⏰ Daily reminder triggered');
-
   try {
-    if (!db) {
-      console.error('❌ Database not connected');
-      return;
-    }
-
+    if (!db) { console.error('❌ DB not connected'); return; }
     const [students] = await db
       .promise()
       .query("SELECT email FROM users WHERE role = 'student'");
-
     if (!students || students.length === 0) {
-      console.log('⚠️ No students found');
+      console.log('⚠️ no students');
       return;
     }
-
     for (const { email } of students) {
-      try {
-        console.log(`📧 Sending email to ${email}`);
-        await sendEmail(email);
-      } catch (err) {
-        console.error(`Failed to send email to ${email}:`, err.message);
-      }
+      try { await sendEmail(email); } catch (e) { console.error(e); }
     }
-
-    console.log('✅ Daily reminder job completed');
-  } catch (err) {
-    console.error('🚨 Cron job error:', err.message);
-  }
+    console.log('✅ Cron job finished');
+  } catch (e) { console.error('🚨 Cron job error', e); }
 });
 
-// Error handlers
-process.on('unhandledRejection', err => console.error('❌ Unhandled Rejection:', err));
-process.on('uncaughtException', err => console.error('❌ Uncaught Exception:', err));
+process.on('unhandledRejection', e => console.error('Unhandled Rejection', e));
+process.on('uncaughtException', e => console.error('Uncaught Exception', e));
 
-// Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🌐 Public URL: https://your-railway-service.up.railway.app`);
 });
