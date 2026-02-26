@@ -4,9 +4,11 @@ const cors = require('cors');
 const cron = require('node-cron');
 
 const db = require('./config/db');
-const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/student');
-const performanceRoutes = require('./routes/performance');
+const authRoutes = require('./routes/authRoutes');        // ✅ Changed
+const studentRoutes = require('./routes/studentRoutes');  // ✅ Changed
+const parentRoutes = require('./routes/parentRoutes');    // ✅ Added
+const teacherRoutes = require('./routes/teacherRoutes');  // ✅ Added
+const analyticsRoutes = require('./routes/analyticsRoutes'); // ✅ Added
 const { sendEmail } = require('./emailservice');
 
 const app = express();
@@ -17,7 +19,9 @@ app.use(express.json());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
-app.use('/api/performance', performanceRoutes);
+app.use('/api/parents', parentRoutes);
+app.use('/api/teachers', teacherRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
