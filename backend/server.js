@@ -1,96 +1,70 @@
-const express = require("express");
-const cors = require("cors");
-const cron = require("node-cron");
-require("dotenv").config();
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const cron = require('node-cron');
 
-// Database connection
-const db = require("./config/db");
-
-// Email service
-const sendAlert = require("./emailservice");
+const db = require('./config/db');
+const authRoutes = require('./routes/auth');
+const studentRoutes = require('./routes/student');
+const performanceRoutes = require('./routes/performance');
+const { sendEmail } = require('./emailservice');
 
 const app = express();
 
-// ======================
-// MIDDLEWARE
-// ======================
 app.use(cors());
 app.use(express.json());
 
-// ======================
-// ROOT ROUTE (Test Route)
-// ======================
-app.get("/", (req, res) => {
-  res.send("🚀 AI Student Performance Predictor Backend is Running Successfully");
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/performance', performanceRoutes);
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: '✅ Server is running' });
 });
 
-// ======================
-// API ROUTES
-// ======================
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/student", require("./routes/studentRoutes"));
-app.use("/api/teacher", require("./routes/teacherRoutes"));
-app.use("/api/parent", require("./routes/parentRoutes"));
-app.use("/api/analytics", require("./routes/analyticsRoutes"));
-
-// ======================
-// DAILY CRON JOB (8 AM)
-// ======================
-// ===============================
-// SAFE DAILY CRON JOB (Railway Safe)
-// ===============================
-
-// Runs every day at 8:00 AM
-cron.schedule("0 8 * * *", async () => {
-  console.log("⏰ Daily reminder triggered");
+// Daily Cron Job (8 AM)
+cron.schedule('0 8 * * *', async () => {
+  console.log('⏰ Daily reminder triggered');
 
   try {
-    // Check if DB connection exists
-    if (!connection) {
-      console.error("❌ No database connection available");
+    if (!db) {
+      console.error('❌ Database not connected');
       return;
     }
 
-    // Fetch student emails safely
-    const [students] = await connection
+    const [students] = await db
       .promise()
       .query("SELECT email FROM users WHERE role = 'student'");
 
-    console.log(`📧 Found ${students.length} students`);
-
     if (!students || students.length === 0) {
-      console.log("⚠️ No students found, skipping email sending.");
+      console.log('⚠️ No students found');
       return;
     }
 
-    // Loop through students
-    for (const student of students) {
+    for (const { email } of students) {
       try {
-        console.log(`Sending reminder to: ${student.email}`);
-
-        // TODO: Replace this with your email function
-        // await sendEmail(student.email);
-
-      } catch (emailError) {
-        console.error(
-          `❌ Failed to send email to ${student.email}:`,
-          emailError
-        );
+        console.log(`📧 Sending email to ${email}`);
+        await sendEmail(email);
+      } catch (err) {
+        console.error(`Failed to send email to ${email}:`, err.message);
       }
     }
 
-    console.log("✅ Daily reminder job completed successfully");
-
-  } catch (error) {
-    console.error("🚨 Cron job error:", error);
+    console.log('✅ Daily reminder job completed');
+  } catch (err) {
+    console.error('🚨 Cron job error:', err.message);
   }
 });
 
-// ======================
-// START SERVER (IMPORTANT FOR RAILWAY)
+// Error handlers
+process.on('unhandledRejection', err => console.error('❌ Unhandled Rejection:', err));
+process.on('uncaughtException', err => console.error('❌ Uncaught Exception:', err));
 
-const PORT = process.env.PORT;
-
-app.listen(PORT, "0.0.0.0", () => {
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🌐 Public URL: https://your-railway-service.up.railway.app`);
 });
